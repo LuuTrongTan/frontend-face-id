@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Người dùng</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #5cb85c;
+            padding: 15px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            background-color: #fff;
+            color: #333;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .sidebar button:hover {
+            background-color: #e7e7e7;
+        }
+        .content {
+            flex-grow: 1;
+            padding: 20px;
+            background-color: #f4f4f4;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+        .user-table th, .user-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .user-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .permission-checkbox {
+            margin: 0 5px;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
+        .notification.success {
+            background-color: #5cb85c;
+            color: white;
+        }
+        .notification.error {
+            background-color: #d9534f;
+            color: white;
+        }
+        .permission-header {
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <button onclick="location.href='register_face'">Đăng ký Khuôn mặt</button>
+        <button onclick="location.href='image_recognition'">Nhận diện Hình ảnh</button>
+        <button onclick="location.href='video_recognition'">Nhận diện Video</button>
+        <button onclick="location.href='recognition_results'">Kết quả Nhận diện</button>
+        <button onclick="location.href='register_account'">Đăng ký Tài khoản</button>
+        <button onclick="location.href='manage_users'">Quản lý Người dùng</button>
+        <button onclick="location.href='logout'">Đăng xuất</button>
+    </div>
+
+    <div class="content">
+        <h2>Quản lý Quyền Người dùng</h2>
+        
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Tài khoản</th>
+                    <th>Tên</th>
+                    <th>Vai trò</th>
+                    <th class="permission-header">Đăng ký<br>Khuôn mặt</th>
+                    <th class="permission-header">Xem<br>Nhận diện</th>
+                    <th class="permission-header">Xem<br>Logs</th>
+                    <th class="permission-header">Quản lý<br>Người dùng</th>
+                    <th class="permission-header">Xóa<br>Dữ liệu</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.role }}</td>
+                    <td style="text-align: center;">
+                        <input type="checkbox" class="permission-checkbox" 
+                               onchange="updatePermission({{ user.id }}, 'can_register_faces', this.checked)"
+                               {% if permissions[user.id] and permissions[user.id].can_register_faces %}checked{% endif %}>
+                    </td>
+                    <td style="text-align: center;">
+                        <input type="checkbox" class="permission-checkbox" 
+                               onchange="updatePermission({{ user.id }}, 'can_view_recognition', this.checked)"
+                               {% if permissions[user.id] and permissions[user.id].can_view_recognition %}checked{% endif %}>
+                    </td>
+                    <td style="text-align: center;">
+                        <input type="checkbox" class="permission-checkbox" 
+                               onchange="updatePermission({{ user.id }}, 'can_view_logs', this.checked)"
+                               {% if permissions[user.id] and permissions[user.id].can_view_logs %}checked{% endif %}>
+                    </td>
+                    <td style="text-align: center;">
+                        <input type="checkbox" class="permission-checkbox" 
+                               onchange="updatePermission({{ user.id }}, 'can_manage_users', this.checked)"
+                               {% if permissions[user.id] and permissions[user.id].can_manage_users %}checked{% endif %}>
+                    </td>
+                    <td style="text-align: center;">
+                        <input type="checkbox" class="permission-checkbox" 
+                               onchange="updatePermission({{ user.id }}, 'can_delete_data', this.checked)"
+                               {% if permissions[user.id] and permissions[user.id].can_delete_data %}checked{% endif %}>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="notification" id="notification"></div>
+
+    <script>
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.innerText = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        function updatePermission(userId, permission, value) {
+            const formData = new FormData();
+            formData.append('user_id', userId);
+            formData.append('permission', permission);
+            formData.append('value', value);
+
+            fetch('/manage_users', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                showNotification(data.message, 'success');
+            })
+            .catch(error => {
+                showNotification(error.message, 'error');
+                // Revert checkbox state on error
+                event.target.checked = !event.target.checked;
+            });
+        }
+    </script>
+</body>
+</html> 

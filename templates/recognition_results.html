@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả Nhận diện</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #5cb85c;
+            padding: 15px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: none;
+            background-color: #fff;
+            color: #333;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .sidebar button:hover {
+            background-color: #e7e7e7;
+        }
+        .content {
+            flex-grow: 1;
+            padding: 20px;
+            background-color: #f4f4f4;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        h2 {
+            text-align: center;
+        }
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .user-table th, .user-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .user-table th {
+            background-color: #f2f2f2;
+        }
+        .user-table img {
+            width: 100px; /* Kích thước ảnh */
+            height: auto;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <button onclick="location.href='register_face'">Đăng ký Khuôn mặt</button>
+        <button onclick="location.href='image_recognition'">Nhận diện Hình ảnh</button>
+        <button onclick="location.href='video_recognition'">Nhận diện Video</button>
+        <button onclick="location.href='recognition_results'">Kết quả Nhận diện</button>
+        <button onclick="location.href='register_account'">Đăng ký Tài khoản</button>
+        <button onclick="location.href='logout'">Đăng xuất</button>
+    </div>
+
+    <div class="content">
+        <h2>Kết quả Nhận diện</h2>
+        <div style="margin-bottom: 20px; text-align: center;">
+            <button onclick="manualRefresh()" style="background-color: #5cb85c; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;">
+                🔄 Làm mới
+            </button>
+            <span id="refreshStatus" style="color: #666; font-size: 14px;">Tự động cập nhật mỗi 2 giây</span>
+        </div>
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Tên</th>
+                    <th>CCCD</th>
+                    <th>SĐT</th>
+                    <th>Giờ Nhận diện</th>
+                    <th>Ảnh</th>
+                </tr>
+            </thead>
+            <tbody id="resultTableBody">
+                <!-- Kết quả sẽ được chèn ở đây thông qua JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+    let refreshInterval;
+    let lastUpdateTime = null;
+    
+    // Function to update refresh status
+    function updateRefreshStatus(message, isRefreshing = false) {
+        const statusElement = document.getElementById('refreshStatus');
+        const now = new Date().toLocaleTimeString('vi-VN');
+        
+        if (isRefreshing) {
+            statusElement.innerHTML = `🔄 Đang cập nhật... (${now})`;
+            statusElement.style.color = '#5cb85c';
+        } else {
+            statusElement.innerHTML = `✅ Cập nhật lần cuối: ${now} - ${message}`;
+            statusElement.style.color = '#666';
+        }
+    }
+    
+    // Function to fetch log data from the server
+    function fetchRecognitionResults() {
+        updateRefreshStatus('Đang tải dữ liệu...', true);
+        
+        fetch('/get_recognition_logs')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const resultTableBody = document.getElementById('resultTableBody');
+                resultTableBody.innerHTML = ''; // Clear old content
+
+                if (data.length === 0) {
+                    resultTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #666;">Chưa có kết quả nhận diện nào</td></tr>';
+                    updateRefreshStatus('Không có dữ liệu');
+                    return;
+                }
+
+                data.forEach((log, index) => {
+                    const row = document.createElement('tr');            
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${log.name}</td>
+                        <td>${log.cccd}</td>
+                        <td>${log.phone}</td>
+                        <td>${log.timestamp}</td>
+                        <td><img src="${log.image_path}" alt="Ảnh nhận diện"></td>
+                    `;
+                    resultTableBody.appendChild(row);
+                });
+                
+                lastUpdateTime = new Date();
+                updateRefreshStatus(`Đã tải ${data.length} kết quả`);
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                updateRefreshStatus('Lỗi khi tải dữ liệu');
+                
+                const resultTableBody = document.getElementById('resultTableBody');
+                resultTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Lỗi khi tải dữ liệu. Vui lòng thử lại.</td></tr>';
+            });
+    }
+
+    // Function to start auto-refresh
+    function startAutoRefresh() {
+        // Refresh every 2 seconds
+        refreshInterval = setInterval(fetchRecognitionResults, 2000);
+    }
+
+    // Function to stop auto-refresh
+    function stopAutoRefresh() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+    }
+
+    // Manual refresh function
+    function manualRefresh() {
+        fetchRecognitionResults();
+    }
+
+    // Call function to fetch results when the page loads
+    window.onload = function() {
+        fetchRecognitionResults(); // Load initial data
+        startAutoRefresh(); // Start auto-refresh
+    };
+
+    // Stop auto-refresh when page is hidden (to save resources)
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            stopAutoRefresh();
+            updateRefreshStatus('Tạm dừng cập nhật (trang ẩn)');
+        } else {
+            startAutoRefresh();
+            updateRefreshStatus('Đã tiếp tục cập nhật');
+        }
+    });
+
+    // Clean up when page is unloaded
+    window.addEventListener('beforeunload', function() {
+        stopAutoRefresh();
+    });
+    </script>
+</body>
+</html>
