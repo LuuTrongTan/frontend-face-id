@@ -36,9 +36,9 @@ const Sidebar = () => {
       icon: 'fas fa-user-plus'
     },
     {
-      title: 'Trạng thái thiết bị',
-      path: '/device-status',
-      icon: 'fas fa-tablet-alt',
+      title: 'Quản lý Người dùng',
+      path: '/user-management',
+      icon: 'fas fa-users-cog',
       adminOnly: true
     },
     {

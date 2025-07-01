@@ -10,8 +10,8 @@ import RegisterFace from './pages/RegisterFace.tsx';
 import ImageRecognition from './pages/ImageRecognition.tsx';
 import VideoRecognition from './pages/VideoRecognition.tsx';
 import LogManagement from './pages/LogManagement.tsx';
-import DeviceStatus from './pages/DeviceStatus.tsx';
 import RegisterAccount from './pages/RegisterAccount.tsx';
+import UserManagement from './pages/UserManagement.tsx';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -48,7 +48,7 @@ function App() {
           <Route path="/register-face" element={<PrivateRoute><RegisterFace /></PrivateRoute>} />
           <Route path="/image-recognition" element={<PrivateRoute><ImageRecognition /></PrivateRoute>} />
           <Route path="/video-recognition" element={<PrivateRoute><VideoRecognition /></PrivateRoute>} />
-          <Route path="/device-status" element={<PrivateRoute adminOnly><DeviceStatus /></PrivateRoute>} />
+          <Route path="/user-management" element={<PrivateRoute adminOnly><UserManagement /></PrivateRoute>} />
           <Route path="/logs" element={<PrivateRoute adminOnly><LogManagement /></PrivateRoute>} />
           <Route path="/register-account" element={<PrivateRoute adminOnly><RegisterAccount /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" />} />
